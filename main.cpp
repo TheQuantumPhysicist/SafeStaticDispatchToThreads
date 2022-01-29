@@ -10,7 +10,6 @@
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <variant>
 
 template <typename T>
 class Channel
