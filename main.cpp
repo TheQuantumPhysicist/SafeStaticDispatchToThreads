@@ -140,7 +140,7 @@ class Wrapper
 
     std::atomic_bool done;
 
-    Wrapper(std::unique_ptr<WT>&& WrappedIn) : wrapped(std::forward<std::unique_ptr<WT>>(WrappedIn))
+    Wrapper(std::unique_ptr<WT>&& WrappedIn) : wrapped(std::move(WrappedIn))
     {
         done.store(false, std::memory_order_seq_cst);
         thread = std::unique_ptr<std::thread>(new std::thread([this]() {
