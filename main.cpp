@@ -44,8 +44,8 @@ public:
 
     std::optional<T> recv()
     {
-        while (!done.load(std::memory_order_acquire)) { // loop to avoid account for spurious wake-ups of
-                                                        // the conditional variable
+        while (!done.load(std::memory_order_acquire)) { // loop to account for spurious
+                                                        // wake-ups of the conditional variable
             std::unique_lock<decltype(mtx)> lg(mtx);
             if (!queue.empty()) {
                 const auto res = std::make_optional(std::move(queue.front()));
@@ -133,7 +133,7 @@ public:
 template <typename WT>
 class Wrapper
 {
-    Channel<std::function<void(WT*)>> in;
+    Channel<std::function<void(WT*)>> ch;
 
     std::unique_ptr<WT>          wrapped;
     std::unique_ptr<std::thread> thread;
@@ -145,7 +145,7 @@ class Wrapper
         done.store(false, std::memory_order_seq_cst);
         thread = std::unique_ptr<std::thread>(new std::thread([this]() {
             while (!done.load(std::memory_order_acquire)) {
-                auto f_data_op = in.recv();
+                auto f_data_op = ch.recv();
                 if (!f_data_op) {
                     break;
                 }
@@ -161,7 +161,7 @@ public:
     Wrapper& operator=(Wrapper&&) = delete;
     ~Wrapper()
     {
-        in.shutdown();
+        ch.shutdown();
         done.store(true, std::memory_order_release);
         if (thread)
             thread->join();
@@ -184,7 +184,7 @@ public:
         auto mem_func_with_return = [promise, mem_func_with_params](WT* wrapper) {
             promise->set_value(mem_func_with_params(wrapper));
         };
-        in.send(mem_func_with_return);
+        ch.send(mem_func_with_return);
         return future;
     }
 };
