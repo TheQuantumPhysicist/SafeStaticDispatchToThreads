@@ -146,11 +146,11 @@ class Wrapper
         done.store(false, std::memory_order_seq_cst);
         thread = std::make_unique<std::thread>([this]() {
             while (!done.load(std::memory_order_acquire)) {
-                auto f_data_op = ch.recv();
-                if (!f_data_op) {
+                auto mem_func_op = ch.recv();
+                if (!mem_func_op) {
                     break;
                 }
-                (*f_data_op)(wrapped.get());
+                (*mem_func_op)(wrapped.get());
             }
         });
     }
