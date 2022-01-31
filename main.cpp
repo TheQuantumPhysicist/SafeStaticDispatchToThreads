@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 #include <thread>
 
 template <typename T>
@@ -143,7 +144,7 @@ class Wrapper
     Wrapper(std::unique_ptr<WT>&& WrappedIn) : wrapped(std::move(WrappedIn))
     {
         done.store(false, std::memory_order_seq_cst);
-        thread = std::unique_ptr<std::thread>(new std::thread([this]() {
+        thread = std::make_unique<std::thread>([this]() {
             while (!done.load(std::memory_order_acquire)) {
                 auto f_data_op = ch.recv();
                 if (!f_data_op) {
@@ -151,7 +152,7 @@ class Wrapper
                 }
                 (*f_data_op)(wrapped.get());
             }
-        }));
+        });
     }
 
 public:
@@ -180,7 +181,7 @@ public:
         assert(wrapped);
         std::shared_ptr<std::promise<ReturnType>> promise = std::make_shared<std::promise<ReturnType>>();
         std::future<ReturnType>                   future  = promise->get_future();
-        auto mem_func_with_params = std::bind(f, std::placeholders::_1, params...);
+        auto mem_func_with_params = std::bind(f, std::placeholders::_1, std::forward<Params>(params)...);
         auto mem_func_with_return = [promise, mem_func_with_params](WT* wrapper) {
             promise->set_value(mem_func_with_params(wrapper));
         };
@@ -188,6 +189,19 @@ public:
         return future;
     }
 };
+
+template <typename T, typename U>
+void AssertEq(T&& a, U&& b, int line)
+{
+    if (a != static_cast<T>(b)) {
+        std::stringstream ss;
+        ss << "Equality check failed for \"" << a << "\" and \"" << b << "\" from line " << line;
+        std::cerr << ss.str() << std::endl;
+        throw std::runtime_error(ss.str());
+    }
+}
+
+#define ASSERT_EQUALITY(a, b) AssertEq(a, b, __LINE__);
 
 int main()
 {
@@ -197,17 +211,17 @@ int main()
     // two calls to SubsystemA
     std::future<std::string> c =
         wrapperA->call<std::string>(&SubsystemA::concate_and_get, std::string("xyz"));
-    std::cout << c.get() << std::endl;
+    ASSERT_EQUALITY(c.get(), "abcxyz");
 
     std::future<std::string> d = wrapperA->call<std::string>(&SubsystemA::sub_value, 1, 3);
-    std::cout << d.get() << std::endl;
+    ASSERT_EQUALITY(d.get(), "bcx");
 
     // two calls to SubsystemB
     std::future<std::uint64_t> f = wrapperB->call<std::uint64_t>(&SubsystemB::get_value);
-    std::cout << f.get() << std::endl;
+    ASSERT_EQUALITY(f.get(), 13);
 
     std::future<std::uint64_t> e = wrapperB->call<std::uint64_t>(&SubsystemB::add_and_get, 3);
-    std::cout << e.get() << std::endl;
+    ASSERT_EQUALITY(e.get(), 16);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
