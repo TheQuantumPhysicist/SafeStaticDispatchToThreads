@@ -171,7 +171,7 @@ public:
     template <typename... Params>
     static std::unique_ptr<Wrapper<WT>> MakeWrapper(Params... params)
     {
-        std::unique_ptr<WT> wrapped = WT::Make(params...);
+        std::unique_ptr<WT> wrapped = WT::Make(std::forward<Params>(params)...);
         return std::unique_ptr<Wrapper<WT>>(new Wrapper<WT>(std::move(wrapped)));
     }
 
