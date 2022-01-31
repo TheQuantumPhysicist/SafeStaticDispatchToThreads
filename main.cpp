@@ -176,7 +176,7 @@ public:
     }
 
     template <typename ReturnType, typename Func, typename... Params>
-    std::future<ReturnType> call(Func f, Params&&... params)
+    std::future<ReturnType> call(Func&& f, Params&&... params)
     {
         assert(wrapped);
         std::shared_ptr<std::promise<ReturnType>> promise = std::make_shared<std::promise<ReturnType>>();
