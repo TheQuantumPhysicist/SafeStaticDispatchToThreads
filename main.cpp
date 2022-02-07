@@ -201,7 +201,7 @@ void AssertEq(T&& a, U&& b, int line)
     }
 }
 
-#define ASSERT_EQUALITY(a, b) AssertEq(a, b, __LINE__);
+#define ASSERT_EQUALITY(a, b) AssertEq(a, b, __LINE__)
 
 int main()
 {
